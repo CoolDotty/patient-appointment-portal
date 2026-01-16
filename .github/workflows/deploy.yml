@@ -100,9 +100,10 @@ jobs:
         run: npm run build
 
       - name: Upload Frontend to Azure Storage
-        uses: azure/storage-blob-upload-action@v1
-        with:
-          connection-string: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
-          container-name: '$web'
-          upload-files: './frontend/dist/**'
-          delete-all-in-container: true
+        run: |
+          az storage blob upload-batch \
+            --account-name ${{ needs.terraform.outputs.storage_account_name }} \
+            --destination '$web' \
+            --source './frontend/dist' \
+            --overwrite \
+            --auth-mode login
