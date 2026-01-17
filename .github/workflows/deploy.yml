@@ -43,6 +43,41 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Ensure Terraform State Infrastructure Exists
+        run: |
+          # Check and create resource group if needed
+          if ! az group show --name "${{ vars.TF_STATE_RESOURCE_GROUP }}" &>/dev/null; then
+            echo "Creating resource group ${{ vars.TF_STATE_RESOURCE_GROUP }}..."
+            az group create \
+              --name "${{ vars.TF_STATE_RESOURCE_GROUP }}" \
+              --location "${{ vars.AZURE_LOCATION }}"
+          else
+            echo "Resource group ${{ vars.TF_STATE_RESOURCE_GROUP }} already exists"
+          fi
+
+          # Check and create storage account if needed
+          if ! az storage account show --name "${{ vars.TF_STATE_STORAGE_ACCOUNT }}" --resource-group "${{ vars.TF_STATE_RESOURCE_GROUP }}" &>/dev/null; then
+            echo "Creating storage account ${{ vars.TF_STATE_STORAGE_ACCOUNT }}..."
+            az storage account create \
+              --name "${{ vars.TF_STATE_STORAGE_ACCOUNT }}" \
+              --resource-group "${{ vars.TF_STATE_RESOURCE_GROUP }}" \
+              --location "${{ vars.AZURE_LOCATION }}" \
+              --sku Standard_LRS \
+              --encryption-services blob
+          else
+            echo "Storage account ${{ vars.TF_STATE_STORAGE_ACCOUNT }} already exists"
+          fi
+
+          # Check and create blob container if needed
+          if ! az storage container show --name "${{ vars.TF_STATE_CONTAINER }}" --account-name "${{ vars.TF_STATE_STORAGE_ACCOUNT }}" &>/dev/null; then
+            echo "Creating container ${{ vars.TF_STATE_CONTAINER }}..."
+            az storage container create \
+              --name "${{ vars.TF_STATE_CONTAINER }}" \
+              --account-name "${{ vars.TF_STATE_STORAGE_ACCOUNT }}"
+          else
+            echo "Container ${{ vars.TF_STATE_CONTAINER }} already exists"
+          fi
+
       - name: Set Terraform Azure Credentials
         run: |
           echo "ARM_CLIENT_ID=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r .clientId)" >> $GITHUB_ENV
