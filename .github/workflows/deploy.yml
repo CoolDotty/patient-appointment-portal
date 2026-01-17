@@ -107,9 +107,13 @@ jobs:
 
       - name: Upload Frontend to Azure Storage
         run: |
+          ACCOUNT_KEY=$(az storage account keys list \
+            --account-name ${{ needs.terraform.outputs.storage_account_name }} \
+            --resource-group ${{ needs.terraform.outputs.resource_group_name }} \
+            --query '[0].value' -o tsv)
           az storage blob upload-batch \
             --account-name ${{ needs.terraform.outputs.storage_account_name }} \
             --destination '$web' \
             --source './frontend/dist' \
             --overwrite \
-            --auth-mode login
+            --account-key "$ACCOUNT_KEY"
