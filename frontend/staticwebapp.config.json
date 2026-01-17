@@ -1,0 +1,11 @@
+{
+  "routes": [
+    {
+      "route": "/api/*",
+      "rewrite": "https://__BACKEND_HOSTNAME__/api/*"
+    }
+  ],
+  "navigationFallback": {
+    "rewrite": "/index.html"
+  }
+}

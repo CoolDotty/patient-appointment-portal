@@ -1,6 +1,17 @@
-output "frontend_url" {
-  description = "The primary endpoint of the static website."
-  value       = azurerm_storage_account.frontend.primary_web_endpoint
+output "static_web_app_name" {
+  description = "The name of the static web app."
+  value       = azurerm_static_web_app.frontend.name
+}
+
+output "static_web_app_url" {
+  description = "The URL of the static web app."
+  value       = azurerm_static_web_app.frontend.default_host_name
+}
+
+output "static_web_app_api_key" {
+  description = "The API key for the static web app, used for deployment."
+  value       = azurerm_static_web_app.frontend.api_key
+  sensitive   = true
 }
 
 output "backend_hostname" {
@@ -11,11 +22,6 @@ output "backend_hostname" {
 output "backend_app_service_name" {
   description = "The name of the backend App Service."
   value       = azurerm_linux_web_app.backend.name
-}
-
-output "storage_account_name" {
-  description = "The name of the storage account."
-  value       = azurerm_storage_account.frontend.name
 }
 
 output "resource_group_name" {

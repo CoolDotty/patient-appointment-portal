@@ -20,16 +20,10 @@ resource "azurerm_resource_group" "main" {
   location = var.location
 }
 
-resource "azurerm_storage_account" "frontend" {
-  name                     = "st${substr(replace(var.resource_group_name, "-", ""), 0, 22)}"
-  resource_group_name      = azurerm_resource_group.main.name
-  location                 = azurerm_resource_group.main.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
-  account_kind             = "StorageV2"
-  static_website {
-    index_document = "index.html"
-  }
+resource "azurerm_static_web_app" "frontend" {
+  name                = "stapp-${var.resource_group_name}"
+  resource_group_name = azurerm_resource_group.main.name
+  location            = azurerm_resource_group.main.location
 }
 
 resource "azurerm_service_plan" "backend" {

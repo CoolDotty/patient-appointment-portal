@@ -26,9 +26,10 @@ jobs:
       TF_VAR_resource_group_name: ${{ vars.RESOURCE_GROUP_NAME }}
       TF_VAR_location: ${{ vars.AZURE_LOCATION }}
     outputs:
+      backend_hostname: ${{ steps.terraform_apply.outputs.backend_hostname }}
       backend_app_service_name: ${{ steps.terraform_apply.outputs.backend_app_service_name }}
-      storage_account_name: ${{ steps.terraform_apply.outputs.storage_account_name }}
       resource_group_name: ${{ steps.terraform_apply.outputs.resource_group_name }}
+      static_web_app_api_key: ${{ steps.terraform_apply.outputs.static_web_app_api_key }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -99,9 +100,10 @@ jobs:
         working-directory: ./terraform
         run: |
           terraform apply -auto-approve
+          echo "backend_hostname=$(terraform output -raw backend_hostname)" >> $GITHUB_OUTPUT
           echo "backend_app_service_name=$(terraform output -raw backend_app_service_name)" >> $GITHUB_OUTPUT
-          echo "storage_account_name=$(terraform output -raw storage_account_name)" >> $GITHUB_OUTPUT
           echo "resource_group_name=$(terraform output -raw resource_group_name)" >> $GITHUB_OUTPUT
+          echo "static_web_app_api_key=$(terraform output -raw static_web_app_api_key)" >> $GITHUB_OUTPUT
 
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -153,6 +155,11 @@ jobs:
           node-version: '18'
           cache: 'yarn'
           cache-dependency-path: frontend/yarn.lock
+      
+      - name: Update proxy config
+        run: |
+          echo "Backend hostname: ${{ needs.terraform.outputs.backend_hostname }}"
+          sed -i "s|__BACKEND_HOSTNAME__|${{ needs.terraform.outputs.backend_hostname }}|g" frontend/staticwebapp.config.json
 
       - name: Install Frontend Dependencies
         working-directory: ./frontend
@@ -162,15 +169,12 @@ jobs:
         working-directory: ./frontend
         run: yarn build
 
-      - name: Upload Frontend to Azure Storage
-        run: |
-          ACCOUNT_KEY=$(az storage account keys list \
-            --account-name ${{ needs.terraform.outputs.storage_account_name }} \
-            --resource-group ${{ needs.terraform.outputs.resource_group_name }} \
-            --query '[0].value' -o tsv)
-          az storage blob upload-batch \
-            --account-name ${{ needs.terraform.outputs.storage_account_name }} \
-            --destination '$web' \
-            --source './frontend/dist' \
-            --overwrite \
-            --account-key "$ACCOUNT_KEY"
+      - name: Deploy Frontend to Azure Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ needs.terraform.outputs.static_web_app_api_key }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: "upload"
+          app_location: "/frontend" 
+          api_location: "" 
+          output_location: "dist"
