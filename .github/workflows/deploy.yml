@@ -5,11 +5,24 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - production
 
 jobs:
   terraform:
     name: 'Terraform'
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'development' }}
+    env:
+      TF_VAR_resource_group_name: ${{ vars.RESOURCE_GROUP_NAME }}
+      TF_VAR_location: ${{ vars.AZURE_LOCATION }}
     outputs:
       backend_app_service_name: ${{ steps.terraform_apply.outputs.backend_app_service_name }}
       storage_account_name: ${{ steps.terraform_apply.outputs.storage_account_name }}
@@ -37,13 +50,18 @@ jobs:
 
       - name: Terraform Init
         working-directory: ./terraform
-        run: terraform init -upgrade
+        run: |
+          terraform init -upgrade \
+            -backend-config="resource_group_name=${{ vars.TF_STATE_RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ vars.TF_STATE_STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ vars.TF_STATE_CONTAINER }}" \
+            -backend-config="key=${{ vars.RESOURCE_GROUP_NAME }}.tfstate"
 
       - name: Terraform Apply
         id: terraform_apply
         working-directory: ./terraform
         run: |
-          terraform apply -auto-approve -var="resource_group_name=demo-deployment" -var="location=westus3"
+          terraform apply -auto-approve
           echo "backend_app_service_name=$(terraform output -raw backend_app_service_name)" >> $GITHUB_OUTPUT
           echo "storage_account_name=$(terraform output -raw storage_account_name)" >> $GITHUB_OUTPUT
           echo "resource_group_name=$(terraform output -raw resource_group_name)" >> $GITHUB_OUTPUT
@@ -51,6 +69,7 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     needs: terraform
+    environment: ${{ inputs.environment || 'development' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3

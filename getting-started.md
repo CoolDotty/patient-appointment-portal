@@ -32,3 +32,24 @@ az group delete --name demo-deployment --yes --no-wait
 ```
 
 Wait for deletion to complete before triggering the workflow.
+
+
+
+Get AZURE_CREDENTIALS
+```
+az ad sp create-for-rbac --name "GitHubActionsDeployment" --role contributor --scopes /subscriptions/$(az account show --query user.name -o tsv) --sdk-auth
+```
+Github Environment
+  ┌──────────────────────────┬───────────────────────┐
+  │         Variable         │     Example Value     |
+  ├──────────────────────────┼───────────────────────┤
+  │ RESOURCE_GROUP_NAME      │ main-deployment       |                                                                                      
+  ├──────────────────────────┼───────────────────────┤ 
+  │ AZURE_LOCATION           │ westus2               |
+  ├──────────────────────────┼───────────────────────┤   
+  │ TF_STATE_RESOURCE_GROUP  │ tfstate-rg            |                                                                                    
+  ├──────────────────────────┼───────────────────────┤
+  │ TF_STATE_STORAGE_ACCOUNT │ tfstatedemodeployment |                                                                                   
+  ├──────────────────────────┼───────────────────────┤
+  │ TF_STATE_CONTAINER       │ tfstate               |                                                                                      
+  └──────────────────────────┴───────────────────────┘ 
